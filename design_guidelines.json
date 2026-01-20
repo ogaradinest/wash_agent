@@ -1,0 +1,141 @@
+{
+  "identity": {
+    "name": "E1: The Anti-AI Designer",
+    "mission": "Create a unique, emotionally resonant interface for a window washing AI agent service. Avoid generic SaaS tropes. Blend 'Service Professionalism' with 'High-Tech Efficiency'.",
+    "principles": [
+      "Fusion over Imitation: Mix 'Cleaning Service' trust with 'AI Tech' precision.",
+      "Emotion First: Cleanliness, Clarity, Reliability.",
+      "Content is King: The 'Call' is the hero.",
+      "Zoom In: Focus on the details of the conversation.",
+      "Negative Space: Use white space to imply cleanliness."
+    ]
+  },
+  "typography": {
+    "headings": {
+      "family": "Outfit, sans-serif",
+      "weights": ["500", "700"],
+      "usage": "Main headings, Hero text. Use tight tracking (-0.02em)."
+    },
+    "body": {
+      "family": "Plus Jakarta Sans, sans-serif",
+      "weights": ["400", "500"],
+      "usage": "Body text, UI elements, Data tables."
+    },
+    "mono": {
+      "family": "JetBrains Mono, monospace",
+      "usage": "Call logs, API data, Timestamps."
+    },
+    "installation": "Import from Google Fonts in index.css: @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap');"
+  },
+  "colors": {
+    "theme": "light",
+    "palette": {
+      "primary": {
+        "name": "Crystal Blue",
+        "hex": "#0EA5E9",
+        "tailwind": "sky-500",
+        "usage": "Primary buttons, Active states, Brand accents."
+      },
+      "secondary": {
+        "name": "Clean Slate",
+        "hex": "#F1F5F9",
+        "tailwind": "slate-100",
+        "usage": "Backgrounds, Secondary buttons."
+      },
+      "accent": {
+        "name": "Safety Orange",
+        "hex": "#F97316",
+        "tailwind": "orange-500",
+        "usage": "Call to Actions (Book Now), Alerts."
+      },
+      "neutral": {
+        "name": "Deep Ocean",
+        "hex": "#0F172A",
+        "tailwind": "slate-900",
+        "usage": "Text, Headings, Borders."
+      },
+      "background": {
+        "name": "Pure White",
+        "hex": "#FFFFFF",
+        "tailwind": "white",
+        "usage": "Card backgrounds, Main content areas."
+      }
+    },
+    "gradients": {
+      "hero": "bg-gradient-to-br from-sky-50 to-white",
+      "glass": "bg-white/70 backdrop-blur-xl border border-white/20 shadow-sm"
+    }
+  },
+  "layout": {
+    "spacing": {
+      "base": "Use generous padding. p-8 or p-12 for sections.",
+      "containers": "Max width 1280px for main content. Centered."
+    },
+    "grid": {
+      "dashboard": "grid-cols-1 md:grid-cols-12 gap-6. Sidebar: col-span-2. Main: col-span-10.",
+      "landing_features": "grid-cols-1 md:grid-cols-3 gap-8."
+    },
+    "radius": "rounded-xl (12px) for cards, rounded-full for buttons."
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-sky-500 hover:bg-sky-600 text-white rounded-full px-8 py-6 font-semibold shadow-lg hover:shadow-sky-500/25 transition-all",
+      "secondary": "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 rounded-full px-6 py-6 font-medium"
+    },
+    "cards": {
+      "style": "bg-white border border-slate-100 shadow-sm hover:shadow-md transition-shadow rounded-xl p-6",
+      "glass": "bg-white/80 backdrop-blur-md border border-white/50 shadow-sm"
+    },
+    "inputs": {
+      "style": "bg-slate-50 border-slate-200 focus:border-sky-500 focus:ring-sky-500/20 rounded-lg h-12"
+    },
+    "status_indicators": {
+      "live": "animate-pulse bg-green-500 h-2.5 w-2.5 rounded-full inline-block mr-2",
+      "offline": "bg-slate-300 h-2.5 w-2.5 rounded-full inline-block mr-2"
+    }
+  },
+  "images": {
+    "hero_bg": {
+      "url": "https://images.pexels.com/photos/33050276/pexels-photo-33050276.jpeg",
+      "alt": "Modern home with sparkling clean windows",
+      "usage": "Hero section background or side image."
+    },
+    "service_action": {
+      "url": "https://images.pexels.com/photos/6873122/pexels-photo-6873122.jpeg",
+      "alt": "Professional window washer in action",
+      "usage": "Features section or 'How it works'."
+    },
+    "ai_agent": {
+      "url": "https://images.pexels.com/photos/8867376/pexels-photo-8867376.jpeg",
+      "alt": "Friendly customer service agent",
+      "usage": "AI Demo section, representing the 'voice' of the AI."
+    }
+  },
+  "pages": {
+    "landing": {
+      "sections": [
+        "Hero: 'Crystal Clear Windows, Intelligent Service'. Split layout with Form on left, Image on right.",
+        "Features: 'Smart Scheduling', 'Instant Quotes', 'Professional Crew'. 3-col grid.",
+        "AI Demo: 'Talk to our AI Agent'. Interactive audio visualizer component.",
+        "Testimonials: 'See what neighbors are saying'.",
+        "Footer: Simple, clean links."
+      ]
+    },
+    "dashboard": {
+      "layout": "Sidebar navigation (Home, Calls, Schedule, Settings). Top bar with User Profile.",
+      "widgets": [
+        "Stats Row: Total Calls, Leads Captured, Revenue Est.",
+        "Live Call Feed: List of recent AI interactions with status badges.",
+        "Calendar Preview: Upcoming jobs for the week."
+      ]
+    }
+  },
+  "universal_guidelines": {
+    "interactions": "All interactive elements must have hover states. Use 'transform hover:-translate-y-1' for cards.",
+    "accessibility": "Ensure text contrast is > 4.5:1. Use aria-labels on icon buttons.",
+    "testing": "Add data-testid to all buttons, inputs, and major containers.",
+    "motion": "Use 'framer-motion' for smooth entrance animations (fade-in-up).",
+    "cleanliness": "Avoid clutter. If in doubt, add more padding."
+  },
+  "instructions_to_main_agent": "You are building a React app. Use the existing Shadcn components in /src/components/ui. Customize them via className props to match the 'Crystal Blue' and 'Clean Slate' aesthetic. Do not use default Shadcn styling blindly; inject the brand personality. For the AI Call simulation, create a visualizer that reacts to 'voice' (mocked) to make it feel alive."
+}
