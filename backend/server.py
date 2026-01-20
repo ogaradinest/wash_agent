@@ -353,6 +353,75 @@ async def log_to_sheets(data: dict):
         "row": random.randint(2, 100)
     }
 
+# Log call from Vapi web SDK
+@api_router.post("/calls/log", response_model=CallLog)
+async def log_vapi_call(request: LogCallRequest):
+    """Log a call from Vapi web SDK"""
+    contact = await db.contacts.find_one({"id": request.contact_id}, {"_id": 0})
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    # Extract timeline from transcript if mentioned
+    timeline_response = None
+    for msg in request.transcript:
+        if msg.get('speaker') == 'Customer':
+            text = msg.get('message', '').lower()
+            if any(word in text for word in ['week', 'month', 'soon', 'asap', 'today', 'tomorrow']):
+                timeline_response = msg.get('message')
+                break
+    
+    summary = f"Voice call with {contact['name']} via web. "
+    if timeline_response:
+        summary += f"Timeline mentioned: {timeline_response}"
+    else:
+        summary += "Customer discussed window washing services."
+    
+    call_log = CallLog(
+        contact_id=request.contact_id,
+        contact_name=contact['name'],
+        contact_phone=contact['phone'],
+        status="completed",
+        duration_seconds=request.duration_seconds,
+        transcript=request.transcript,
+        timeline_response=timeline_response,
+        summary=summary
+    )
+    
+    doc = call_log.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    
+    await db.call_logs.insert_one(doc)
+    
+    # Update contact status
+    await db.contacts.update_one(
+        {"id": request.contact_id},
+        {"$set": {"status": "called"}}
+    )
+    
+    # Auto-schedule follow-up
+    follow_up_date = datetime.now(timezone.utc) + timedelta(days=random.randint(1, 3))
+    scheduled_event = ScheduledEvent(
+        contact_id=request.contact_id,
+        contact_name=contact['name'],
+        title=f"Follow-up with {contact['name']}",
+        description=f"Timeline: {timeline_response or 'To be confirmed'}",
+        scheduled_date=follow_up_date
+    )
+    
+    event_doc = scheduled_event.model_dump()
+    event_doc['created_at'] = event_doc['created_at'].isoformat()
+    event_doc['scheduled_date'] = event_doc['scheduled_date'].isoformat()
+    
+    await db.scheduled_events.insert_one(event_doc)
+    
+    await db.contacts.update_one(
+        {"id": request.contact_id},
+        {"$set": {"status": "scheduled"}}
+    )
+    
+    logger.info(f"Vapi call logged for contact: {contact['name']}")
+    return call_log
+
 # Include the router in the main app
 app.include_router(api_router)
 
