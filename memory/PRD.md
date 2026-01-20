@@ -21,7 +21,8 @@ Build an AI agent for a window washing company. The AI agent calls a customer af
 - **Frontend**: React with Tailwind CSS + Shadcn UI
 - **Backend**: FastAPI (Python)
 - **Database**: MongoDB
-- **Integrations**: Twilio + OpenAI (MOCKED), Google Sheets (MOCKED), Google Calendar (MOCKED)
+- **Voice AI**: Vapi Web SDK (REAL - browser-based voice calls)
+- **Integrations**: Google Sheets (MOCKED), Google Calendar (MOCKED)
 
 ## Architecture
 ```
@@ -32,38 +33,44 @@ Build an AI agent for a window washing company. The AI agent calls a customer af
                                 │
                                 ▼
                         ┌─────────────────┐
-                        │  AI Call Init   │──────┐
-                        │  (MOCKED)       │      │
-                        └─────────────────┘      │
-                                │                │
-                                ▼                ▼
-                        ┌─────────────────┐ ┌───────────────┐
-                        │   Call Logs     │ │  Scheduled    │
-                        │   (MongoDB)     │ │  Events       │
-                        └─────────────────┘ └───────────────┘
+                        │  Vapi Web SDK   │
+                        │  (Browser Voice)│
+                        └─────────────────┘
+                                │
+                                ▼
+                        ┌─────────────────┐     ┌───────────────┐
+                        │   Call Logs     │────▶│  Scheduled    │
+                        │   (MongoDB)     │     │  Events       │
+                        └─────────────────┘     └───────────────┘
 ```
 
 ## What's Been Implemented (Jan 20, 2026)
 
 ### Backend (FastAPI)
 - ✅ Contact CRUD endpoints (POST/GET /api/contacts)
-- ✅ AI Call initiation endpoint (POST /api/calls/initiate) - MOCKED
+- ✅ Vapi call logging endpoint (POST /api/calls/log)
+- ✅ AI Call initiation endpoint (POST /api/calls/initiate) - for demo mode
 - ✅ Call logs endpoints (GET /api/calls)
 - ✅ Scheduled events endpoints (POST/GET /api/schedule)
 - ✅ Dashboard stats endpoint (GET /api/stats)
 - ✅ Mock Google Sheets logging (POST /api/sheets/log)
 
 ### Frontend (React)
-- ✅ Landing page with hero section and contact form
+- ✅ Landing page with hero section and contact form (UK phone format)
 - ✅ Features section highlighting key benefits
-- ✅ AI Call Demo component with live transcript simulation
+- ✅ **REAL Vapi Voice Integration** - Browser-based voice calls with AI assistant
+- ✅ Live transcript display during voice calls
 - ✅ Admin Dashboard with:
   - Overview tab (stats, recent contacts, recent calls)
   - Contacts tab (full list with call action)
   - Call Logs tab (history with transcript detail view)
   - Schedule tab (calendar + scheduled follow-ups)
 - ✅ Responsive design (mobile + desktop)
-- ✅ Navigation between pages
+
+### Vapi Integration
+- Public Key: fa42cea9-cad7-4b6a-ba56-b114cd3726c9
+- Assistant ID: ffdbd713-6f8f-403f-945e-7f1eafa85abb
+- Features: Real-time voice, live transcription, mute control
 
 ### Design System
 - Crystal Blue (#0EA5E9) primary color
