@@ -81,6 +81,11 @@ class ScheduleCreate(BaseModel):
 class InitiateCallRequest(BaseModel):
     contact_id: str
 
+class LogCallRequest(BaseModel):
+    contact_id: str
+    transcript: List[dict]
+    duration_seconds: Optional[int] = 0
+
 # ============ MOCK AI CONVERSATION ============
 
 def generate_mock_ai_conversation(contact_name: str, contact_phone: str) -> dict:
