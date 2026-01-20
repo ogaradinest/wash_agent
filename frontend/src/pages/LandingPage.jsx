@@ -165,7 +165,7 @@ const LandingPage = () => {
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="(555) 123-4567"
+                        placeholder="+44 7700 900123"
                         value={formData.phone}
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         required
