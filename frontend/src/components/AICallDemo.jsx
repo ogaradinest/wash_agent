@@ -1,96 +1,169 @@
-import React, { useState, useEffect } from 'react';
-import { Phone, PhoneOff, Mic, Volume2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Phone, PhoneOff, Mic, MicOff, Volume2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { toast } from 'sonner';
 import axios from 'axios';
+import Vapi from '@vapi-ai/web';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const VAPI_PUBLIC_KEY = process.env.REACT_APP_VAPI_PUBLIC_KEY;
+const VAPI_ASSISTANT_ID = process.env.REACT_APP_VAPI_ASSISTANT_ID;
 
 const AICallDemo = ({ contact }) => {
-  const [callState, setCallState] = useState('idle'); // idle, ringing, connected, ended
+  const [callState, setCallState] = useState('idle'); // idle, connecting, connected, ended
   const [transcript, setTranscript] = useState([]);
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [volumeLevel, setVolumeLevel] = useState(0);
+  const vapiRef = useRef(null);
 
-  // Demo conversation
-  const demoTranscript = [
-    { speaker: 'AI Agent', message: "Hello! This is Crystal Clear Windows calling. Am I speaking with the homeowner?", timestamp: '00:00' },
-    { speaker: 'Customer', message: "Yes, this is them.", timestamp: '00:03' },
-    { speaker: 'AI Agent', message: "Great! I'm calling to confirm your recent inquiry about our window washing services. Is this still a good time to talk?", timestamp: '00:06' },
-    { speaker: 'Customer', message: "Yes, absolutely.", timestamp: '00:12' },
-    { speaker: 'AI Agent', message: "Perfect! Could you tell me what timeline you're looking at for getting your windows cleaned?", timestamp: '00:15' },
-    { speaker: 'Customer', message: "I'm thinking within the next two weeks would be ideal.", timestamp: '00:20' },
-    { speaker: 'AI Agent', message: "That sounds great! I've noted that down. One of our team members will follow up with you shortly to discuss specific details and provide a quote. Is there anything else you'd like to know?", timestamp: '00:25' },
-    { speaker: 'Customer', message: "No, that's all for now. Thank you!", timestamp: '00:32' },
-    { speaker: 'AI Agent', message: "Wonderful! Thank you for choosing Crystal Clear Windows. Have a great day!", timestamp: '00:35' }
-  ];
-
-  const startDemoCall = () => {
-    setCallState('ringing');
-    setTranscript([]);
-    setCurrentMessageIndex(0);
-    
-    setTimeout(() => {
-      setCallState('connected');
-      setIsPlaying(true);
-    }, 2000);
-  };
-
-  const endCall = () => {
-    setCallState('ended');
-    setIsPlaying(false);
-    toast.success('Demo call completed!');
-  };
-
-  // Simulate conversation playback
+  // Initialize Vapi
   useEffect(() => {
-    if (isPlaying && currentMessageIndex < demoTranscript.length) {
-      const timer = setTimeout(() => {
-        setTranscript(prev => [...prev, demoTranscript[currentMessageIndex]]);
-        setCurrentMessageIndex(prev => prev + 1);
-      }, 2500);
+    if (VAPI_PUBLIC_KEY) {
+      vapiRef.current = new Vapi(VAPI_PUBLIC_KEY);
       
-      return () => clearTimeout(timer);
-    } else if (currentMessageIndex >= demoTranscript.length && isPlaying) {
-      setTimeout(() => {
-        endCall();
-      }, 1500);
-    }
-  }, [isPlaying, currentMessageIndex]);
-
-  // Real call initiation if contact is provided
-  const initiateRealCall = async () => {
-    if (!contact) {
-      toast.error('Please submit the contact form first');
-      return;
-    }
-    
-    setCallState('ringing');
-    setTranscript([]);
-    
-    try {
-      setTimeout(async () => {
+      // Set up event listeners
+      vapiRef.current.on('call-start', () => {
+        console.log('Call started');
         setCallState('connected');
-        const response = await axios.post(`${API}/calls/initiate`, { contact_id: contact.id });
+        toast.success('Connected to AI Agent!');
+      });
+
+      vapiRef.current.on('call-end', () => {
+        console.log('Call ended');
+        setCallState('ended');
+        toast.info('Call ended');
+      });
+
+      vapiRef.current.on('speech-start', () => {
+        setVolumeLevel(0.7);
+      });
+
+      vapiRef.current.on('speech-end', () => {
+        setVolumeLevel(0);
+      });
+
+      vapiRef.current.on('volume-level', (level) => {
+        setVolumeLevel(level);
+      });
+
+      vapiRef.current.on('message', (message) => {
+        console.log('Vapi message:', message);
         
-        // Play through the transcript
-        const callTranscript = response.data.transcript;
-        for (let i = 0; i < callTranscript.length; i++) {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          setTranscript(prev => [...prev, callTranscript[i]]);
+        // Handle transcript messages
+        if (message.type === 'transcript') {
+          const speaker = message.role === 'assistant' ? 'AI Agent' : 'Customer';
+          const newMessage = {
+            speaker,
+            message: message.transcript,
+            timestamp: new Date().toLocaleTimeString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              second: '2-digit'
+            }),
+            isFinal: message.transcriptType === 'final'
+          };
+          
+          if (message.transcriptType === 'final') {
+            setTranscript(prev => [...prev, newMessage]);
+          }
         }
         
-        setTimeout(() => {
-          setCallState('ended');
-          toast.success('AI call completed! Check the dashboard for details.');
-        }, 1500);
-      }, 2000);
-    } catch (error) {
-      toast.error('Failed to initiate call');
-      setCallState('idle');
-      console.error(error);
+        // Handle conversation updates
+        if (message.type === 'conversation-update') {
+          // Log conversation for backend storage
+          console.log('Conversation update:', message.conversation);
+        }
+      });
+
+      vapiRef.current.on('error', (error) => {
+        console.error('Vapi error:', error);
+        toast.error('Call error: ' + (error.message || 'Connection failed'));
+        setCallState('idle');
+      });
     }
+
+    return () => {
+      if (vapiRef.current) {
+        vapiRef.current.stop();
+      }
+    };
+  }, []);
+
+  const startCall = async () => {
+    if (!vapiRef.current) {
+      toast.error('Vapi not initialized. Check your API key.');
+      return;
+    }
+
+    setCallState('connecting');
+    setTranscript([]);
+
+    try {
+      // Prepare assistant overrides with customer context
+      const assistantOverrides = {};
+      
+      if (contact) {
+        // Pass customer info to the assistant via variable values
+        assistantOverrides.variableValues = {
+          customerName: contact.name,
+          customerPhone: contact.phone,
+          customerEmail: contact.email
+        };
+      }
+
+      await vapiRef.current.start(VAPI_ASSISTANT_ID, assistantOverrides);
+    } catch (error) {
+      console.error('Failed to start call:', error);
+      toast.error('Failed to start call. Please check microphone permissions.');
+      setCallState('idle');
+    }
+  };
+
+  const endCall = async () => {
+    if (vapiRef.current) {
+      vapiRef.current.stop();
+    }
+    
+    // Save call log to backend if we have a contact
+    if (contact && transcript.length > 0) {
+      try {
+        await axios.post(`${API}/calls/log`, {
+          contact_id: contact.id,
+          transcript: transcript,
+          duration_seconds: Math.floor(transcript.length * 5) // Approximate duration
+        });
+      } catch (error) {
+        console.error('Failed to save call log:', error);
+      }
+    }
+    
+    setCallState('ended');
+  };
+
+  const toggleMute = () => {
+    if (vapiRef.current) {
+      const newMuteState = !isMuted;
+      vapiRef.current.setMuted(newMuteState);
+      setIsMuted(newMuteState);
+      toast.info(newMuteState ? 'Microphone muted' : 'Microphone unmuted');
+    }
+  };
+
+  const resetCall = () => {
+    setCallState('idle');
+    setTranscript([]);
+    setIsMuted(false);
+    setVolumeLevel(0);
+  };
+
+  // Audio visualization bars based on volume level
+  const getBarHeight = (index) => {
+    if (callState !== 'connected') return 8;
+    const baseHeight = 8;
+    const maxHeight = 40;
+    const variation = Math.sin((index + Date.now() / 200) * 0.5) * 0.3 + 0.7;
+    return baseHeight + (maxHeight - baseHeight) * volumeLevel * variation;
   };
 
   return (
@@ -101,9 +174,9 @@ const AICallDemo = ({ contact }) => {
             {/* Left - AI Agent Visual */}
             <div className="bg-gradient-to-br from-sky-500 to-sky-600 p-8 flex flex-col items-center justify-center min-h-[400px]">
               <div className="relative mb-6">
-                <div className="w-32 h-32 rounded-full bg-white/20 flex items-center justify-center">
+                <div className={`w-32 h-32 rounded-full bg-white/20 flex items-center justify-center transition-all duration-300 ${callState === 'connected' ? 'scale-110' : ''}`}>
                   <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center">
-                    <Phone className="w-10 h-10 text-sky-500" />
+                    <Phone className={`w-10 h-10 text-sky-500 ${callState === 'connecting' ? 'animate-pulse' : ''}`} />
                   </div>
                 </div>
                 {callState === 'connected' && (
@@ -115,33 +188,34 @@ const AICallDemo = ({ contact }) => {
               <p className="text-sky-100 mb-6">Your Window Washing Assistant</p>
               
               {/* Audio Visualizer */}
-              {callState === 'connected' && (
-                <div className="flex items-end gap-1 h-10 mb-6" data-testid="audio-visualizer">
-                  {[...Array(5)].map((_, i) => (
-                    <div 
-                      key={i}
-                      className="w-2 bg-white rounded-full audio-bar"
-                      style={{ animationDelay: `${i * 0.1}s` }}
-                    />
-                  ))}
-                </div>
-              )}
+              <div className="flex items-end gap-1 h-12 mb-6" data-testid="audio-visualizer">
+                {[...Array(7)].map((_, i) => (
+                  <div 
+                    key={i}
+                    className="w-2 bg-white rounded-full transition-all duration-100"
+                    style={{ 
+                      height: `${getBarHeight(i)}px`,
+                      opacity: callState === 'connected' ? 1 : 0.3
+                    }}
+                  />
+                ))}
+              </div>
               
               {/* Call Status */}
               <div className="flex items-center gap-2 text-white">
                 {callState === 'idle' && (
-                  <span className="text-sky-100">Ready to call</span>
+                  <span className="text-sky-100">Ready to talk</span>
                 )}
-                {callState === 'ringing' && (
+                {callState === 'connecting' && (
                   <>
                     <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
-                    <span>Calling...</span>
+                    <span>Connecting...</span>
                   </>
                 )}
                 {callState === 'connected' && (
                   <>
                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                    <span>Connected</span>
+                    <span>Live Conversation</span>
                   </>
                 )}
                 {callState === 'ended' && (
@@ -168,13 +242,22 @@ const AICallDemo = ({ contact }) => {
               {/* Transcript Area */}
               <div className="flex-1 bg-slate-50 rounded-xl p-4 mb-6 overflow-y-auto max-h-[250px] min-h-[200px]" data-testid="transcript-area">
                 {transcript.length === 0 && callState === 'idle' && (
-                  <div className="h-full flex items-center justify-center text-slate-400">
-                    <p>Start a demo call to see the AI in action</p>
+                  <div className="h-full flex items-center justify-center text-slate-400 text-center px-4">
+                    <div>
+                      <Mic className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p>Click "Start Call" to speak with our AI agent</p>
+                      <p className="text-xs mt-1">Make sure to allow microphone access</p>
+                    </div>
                   </div>
                 )}
-                {transcript.length === 0 && callState === 'ringing' && (
+                {transcript.length === 0 && callState === 'connecting' && (
                   <div className="h-full flex items-center justify-center text-slate-500">
-                    <p className="animate-pulse">Connecting...</p>
+                    <p className="animate-pulse">Connecting to AI Agent...</p>
+                  </div>
+                )}
+                {transcript.length === 0 && callState === 'connected' && (
+                  <div className="h-full flex items-center justify-center text-slate-500">
+                    <p>Listening... Start speaking!</p>
                   </div>
                 )}
                 <div className="space-y-3">
@@ -190,7 +273,7 @@ const AICallDemo = ({ contact }) => {
                             : 'bubble-ai'
                         }`}
                       >
-                        <p className="font-medium text-xs mb-1 opacity-70">{msg.speaker}</p>
+                        <p className="font-medium text-xs mb-1 opacity-70">{msg.speaker} • {msg.timestamp}</p>
                         <p>{msg.message}</p>
                       </div>
                     </div>
@@ -198,52 +281,62 @@ const AICallDemo = ({ contact }) => {
                 </div>
               </div>
               
+              {/* Customer Context */}
+              {contact && callState === 'idle' && (
+                <div className="bg-sky-50 rounded-lg p-3 mb-4 text-sm">
+                  <p className="text-sky-800 font-medium">Calling as: {contact.name}</p>
+                  <p className="text-sky-600 text-xs">{contact.phone}</p>
+                </div>
+              )}
+              
               {/* Call Controls */}
               <div className="flex gap-3">
                 {callState === 'idle' && (
+                  <Button 
+                    className="flex-1 bg-sky-500 hover:bg-sky-600 text-white rounded-full h-12"
+                    onClick={startCall}
+                    data-testid="start-call-btn"
+                  >
+                    <Phone className="w-5 h-5 mr-2" />
+                    {contact ? `Talk to AI Agent` : 'Start Call'}
+                  </Button>
+                )}
+                {callState === 'connecting' && (
+                  <Button 
+                    className="flex-1 bg-slate-400 text-white rounded-full h-12"
+                    disabled
+                  >
+                    <div className="w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Connecting...
+                  </Button>
+                )}
+                {callState === 'connected' && (
                   <>
                     <Button 
-                      className="flex-1 bg-sky-500 hover:bg-sky-600 text-white rounded-full h-12"
-                      onClick={startDemoCall}
-                      data-testid="start-demo-call-btn"
+                      className={`h-12 px-4 rounded-full ${isMuted ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                      onClick={toggleMute}
+                      data-testid="mute-btn"
                     >
-                      <Phone className="w-5 h-5 mr-2" />
-                      Start Demo Call
+                      {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                     </Button>
-                    {contact && (
-                      <Button 
-                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-full h-12"
-                        onClick={initiateRealCall}
-                        data-testid="call-me-now-btn"
-                      >
-                        <Phone className="w-5 h-5 mr-2" />
-                        Call {contact.name.split(' ')[0]}
-                      </Button>
-                    )}
+                    <Button 
+                      className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-full h-12"
+                      onClick={endCall}
+                      data-testid="end-call-btn"
+                    >
+                      <PhoneOff className="w-5 h-5 mr-2" />
+                      End Call
+                    </Button>
                   </>
-                )}
-                {(callState === 'ringing' || callState === 'connected') && (
-                  <Button 
-                    className="flex-1 bg-red-500 hover:bg-red-600 text-white rounded-full h-12"
-                    onClick={endCall}
-                    data-testid="end-call-btn"
-                  >
-                    <PhoneOff className="w-5 h-5 mr-2" />
-                    End Call
-                  </Button>
                 )}
                 {callState === 'ended' && (
                   <Button 
                     className="flex-1 bg-sky-500 hover:bg-sky-600 text-white rounded-full h-12"
-                    onClick={() => {
-                      setCallState('idle');
-                      setTranscript([]);
-                      setCurrentMessageIndex(0);
-                    }}
+                    onClick={resetCall}
                     data-testid="call-again-btn"
                   >
                     <Phone className="w-5 h-5 mr-2" />
-                    Call Again
+                    Start New Call
                   </Button>
                 )}
               </div>
@@ -254,9 +347,10 @@ const AICallDemo = ({ contact }) => {
       
       {/* Info Text */}
       <p className="text-center text-slate-500 text-sm mt-6">
-        This is a demonstration of our AI calling agent. In production, 
-        this uses Twilio + OpenAI for real voice conversations.
-        <span className="block mt-1 text-xs text-slate-400">(Currently MOCKED for demo purposes)</span>
+        This is a live AI voice conversation powered by Vapi.
+        <span className="block mt-1 text-xs text-slate-400">
+          Allow microphone access when prompted to start talking.
+        </span>
       </p>
     </div>
   );
