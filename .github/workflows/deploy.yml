@@ -1,0 +1,71 @@
+name: Build and Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack (for Yarn)
+        run: corepack enable
+
+      - name: Remove emergent.sh scripts from index.html
+        working-directory: ./frontend/public
+        run: |
+          node -e "
+            const fs = require('fs');
+            let html = fs.readFileSync('index.html', 'utf8');
+            html = html.replace(/<script src=\"https:\/\/assets\.emergent\.sh\/[^\"]*\"><\/script>\s*/g, '');
+            html = html.replace(/<!--[\s\S]*?These two scripts have been added[\s\S]*?<\/script>\s*/g, '');
+            html = html.replace(/<a\s+id=\"emergent-badge\"[\s\S]*?<\/a>\s*/g, '');
+            html = html.replace(/<script>\s*!\(function[\s\S]*?posthog\.init[\s\S]*?<\/script>\s*/g, '');
+            html = html.replace(/<title>Emergent[^<]*<\/title>/, '<title>Wash Agent</title>');
+            html = html.replace(/content=\"A product of emergent\.sh\"/, 'content=\"Wash Agent\"');
+            fs.writeFileSync('index.html', html);
+            console.log('Cleaned index.html successfully');
+          "
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: yarn install
+
+      - name: Build the React app
+        working-directory: ./frontend
+        env:
+          PUBLIC_URL: /wash_agent
+          CI: false
+        run: yarn build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./frontend/build
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
