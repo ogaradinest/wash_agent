@@ -175,7 +175,7 @@ const LandingPage = () => {
                     </div>
                     <Button 
                       type="submit" 
-                      className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white rounded-full font-semibold shadow-lg hover:shadow-orange-500/25 transition-all"
+                      className="w-full h-12 bg-red-500 hover:bg-red-600 text-white rounded-full font-semibold shadow-lg hover:shadow-red-500/25 transition-all"
                       disabled={isSubmitting}
                       data-testid="submit-contact-btn"
                     >
